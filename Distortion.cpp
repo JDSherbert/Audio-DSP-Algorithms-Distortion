@@ -1,31 +1,24 @@
-// ©2024 JDSherbert. All Rights Reserved.
-
+// Copyright (c) 2024 JDSherbert. All rights reserved.
+ 
 #include "Distortion.h"
-
-Distortion::Distortion(double amount) 
-: distortionAmount(amount) 
+ 
+#include <cassert>
+ 
+// ======================================================================= //
+ 
+Sherbert::Distortion::Distortion(float distortionAmount)
+    : distortionAmount(distortionAmount)
 {
+    assert(distortionAmount > 0.0f);
 }
-
-Distortion::~Distortion() 
+ 
+// ======================================================================= //
+ 
+void Sherbert::Distortion::setDistortionAmount(float newAmount)
 {
+    assert(newAmount > 0.0f);
+    distortionAmount = newAmount;
 }
-
-void Distortion::SetAmount(double amount) 
-{
-    distortionAmount = amount;
-}
-
-double Distortion::Distort(double input) 
-{
-    // Apply a simple soft clipping function
-    return std::tanh(distortionAmount * input);
-}
-
-void Distortion::ApplyDistortion(std::vector<double>& audioBuffer) 
-{
-    for (double& sample : audioBuffer) 
-    {
-        sample = Distort(sample);
-    }
-}
+ 
+// ======================================================================= //
+ 
