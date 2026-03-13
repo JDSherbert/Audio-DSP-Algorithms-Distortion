@@ -1,60 +1,91 @@
-// ©2024 JDSherbert. All rights reserved.
-
-#include <iostream> // For debug printing
-#include <cmath> // For M_PI
-
-#include "Distortion.h"
-
-// Function to generate a simple input signal (for demonstration purposes)
-double GenerateInputSignal(double frequency, double time)
+// Copyright (c) 2024 JDSherbert. All rights reserved.
+ 
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <vector>
+ 
+#include "SoftClipDistortion.h"
+#include "HardClipDistortion.h"
+#include "FoldbackDistortion.h"
+ 
+// ======================================================================= //
+ 
+// Generates a single sample of a sine wave at the given frequency and time.
+// frequency - Hz (e.g. 440.0 = concert A)
+// time      - position in seconds (e.g. sampleIndex / sampleRate)
+float GenerateInputSignal(float frequency, float time)
 {
-    return sin(2.0 * M_PI * frequency * time);
+    return std::sin(2.0f * static_cast<float>(M_PI) * frequency * time);
 }
-
-// Function to print the wave values
-void PrintMe(std::string type, std::string value)
+ 
+// ======================================================================= //
+ 
+// Prints a labelled sample value to stdout.
+void PrintSample(const std::string& label, float value)
 {
-    std::cout << type << " : " << value << std::endl;
+    std::cout << label << " : " << value << "\n";
 }
-
-int main() 
+ 
+// ======================================================================= //
+ 
+// Runs a distortion effect over a buffer and prints before/after values
+// for the first printCount samples so the effect is clearly visible.
+void DemonstrateDistortion
+(
+    Sherbert::Distortion& effect,
+    const std::vector<float>& inputBuffer,
+    const std::string& label,
+    int printCount = 10
+)
 {
-    // Sample rate and duration of the sine wave
-    const int sampleRate = 44100;  // 44.1 kHz
-    const double duration = 5.0;   // 5 seconds
-
-    // Number of samples in the buffer
+    std::cout << "\n--- " << label << " ---\n";
+ 
+    for (int i = 0; i < printCount; ++i)
+    {
+        const float input  = inputBuffer[i];
+        const float output = effect.ProcessSample(input);
+        PrintSample("  Input ", input);
+        PrintSample("  Output", output);
+        std::cout << "\n";
+    }
+}
+ 
+// ======================================================================= //
+ 
+int main()
+{
+    // == Signal Parameters ==============================================
+    const int   sampleRate  = 44100;   // 44.1 kHz
+    const float frequency   = 440.0f;  // Concert A
+    const float duration    = 0.1f;    // 0.1 seconds — enough to see the effect
+ 
     const int numSamples = static_cast<int>(sampleRate * duration);
-
-    // Generate a sine wave vector
-    std::vector<double> sineWave;
-    for (double i = 0; i < numSamples; ++i) 
+ 
+    // == Generate Sine Wave ==============================================
+    // Each sample index is divided by sampleRate to convert it to seconds.
+    // This is then passed to the sine function as the time argument:
+    //   sample = sin(2π * frequency * time)
+    std::vector<float> sineWave(numSamples);
+    for (int i = 0; i < numSamples; ++i)
     {
-        sineWave.push_back(GenerateInputSignal(440.0, i / sampleRate)); 
-        /* In the context of this example, we're generating a sinusoidal signal with a frequency of 440.0 Hertz;
-         * this division scales the loop index to represent time in seconds. 
-         * The formula for calculating the angle (argument) of the sine function is typically given as 2 * π * frequency * time. 
-         * In this case, time is derived by dividing the loop index (i) by the sample rate (44100).
-         */
+        sineWave[i] = GenerateInputSignal(frequency, i / static_cast<float>(sampleRate));
     }
-
-    // Print the original sine wave values to the console
-    for (double value : sineWave) 
-    {
-        PrintMe("Original", value);
-    }
-
-    // Create a Distortion object with an initial distortion amount
-    Distortion distortionEffect(0.5);
-
-    // Apply distortion to the sine wave
-    distortionEffect.ApplyDistortion(sineWave);
-
-    // Print the distorted sine wave values to the console
-    for (double value : sineWave) 
-    {
-        PrintMe("Distorted", value);
-    }
-
+ 
+    // == Demonstrate Each Distortion Type ================================
+    // Each distortion type is demonstrated independently on the same
+    // input buffer so the differences in character are easy to compare.
+ 
+    Sherbert::SoftClipDistortion  softClip (2.0f);
+    Sherbert::HardClipDistortion  hardClip (3.0f, 0.8f);
+    Sherbert::FoldbackDistortion  foldback (2.0f, 1.0f);
+ 
+    DemonstrateDistortion(softClip, sineWave, "Soft Clip  (amount: 2.0)");
+    DemonstrateDistortion(hardClip, sineWave, "Hard Clip  (amount: 3.0, threshold: 0.8)");
+    DemonstrateDistortion(foldback, sineWave, "Foldback   (amount: 2.0, threshold: 1.0)");
+ 
     return 0;
 }
+ 
+// ======================================================================= //
+ 
